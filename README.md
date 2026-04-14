@@ -1,4 +1,21 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Mycelia CSV Reporter
+
+A local-first, privacy-focused CSV analysis tool powered by DuckDB-WASM and AI.
+
+## Features
+- **Local Analytics**: Large CSV files (up to 2GB) are processed entirely in your browser using DuckDB-WASM.
+- **Natural Language Query**: Ask questions in plain English and get SQL answers instantly.
+- **Dynamic Model Selection**: Support for OpenAI, Anthropic, and Gemini (v1beta) with custom base URL support.
+- **Smart Visualization**: Automatic chart inference (Bar, Line, Pie) based on data shape.
+- **Privacy Native**: API keys and data never leave your browser. Stored in session memory only.
+- **Session History**: Track and revisit previous queries in a dedicated sidebar.
+- **Export**: Generate and download CSV reports from your query results.
+
+## Technical Architecture
+- **Frontend**: Next.js 15 (App Router, Static Export)
+- **Engine**: DuckDB-WASM with browser-side CSV ingestion
+- **State**: Zustand with session-only persistence
+- **Styling**: Vanilla CSS for premium aesthetics
 
 ## Getting Started
 
@@ -6,31 +23,18 @@ First, run the development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:4000](http://localhost:4000) with your browser to see the result. (Note: The default port has been changed to 4000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Environment & Security
+- **No `.env` required**: This app is designed to be fully client-side.
+- **CORS Handling**: When using custom OpenAI endpoints, ensure the endpoint supports CORS requests from your origin.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Development
+- `npm run build`: Verified static production build.
+- `tsc --noEmit`: Strict type checking.
+- `eslint .`: Linting verification.
 
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## License
+MIT
