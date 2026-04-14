@@ -93,7 +93,7 @@ export function KeyManagerModal({ isOpen, onClose }: KeyManagerModalProps) {
             >
               {availableModels.map((m) => (
                 <option key={m.id} value={m.id}>
-                  {m.name || m.id}
+                  {m.name || m.id} {m.description ? m.description : ''}
                 </option>
               ))}
             </Select>

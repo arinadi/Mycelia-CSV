@@ -207,9 +207,18 @@ export const useAppStore = create<AppState>()((set, get) => ({
         });
         if (res.ok) {
           const data = await res.json();
-          const models = (data.data as { id: string }[])
-            ?.filter((m) => m.id.includes('gpt'))
-            .map((m) => ({ id: m.id, name: m.id })) || [];
+          const models = (data.data as { id: string; owned_by?: string }[])
+            ?.sort((a, b) => {
+              const ownerA = a.owned_by || '';
+              const ownerB = b.owned_by || '';
+              if (ownerA !== ownerB) return ownerA.localeCompare(ownerB);
+              return a.id.localeCompare(b.id);
+            })
+            .map((m) => ({ 
+              id: m.id, 
+              name: m.id,
+              description: m.owned_by ? `(${m.owned_by})` : undefined
+            })) || [];
           set({ 
             availableModels: models,
             selectedModelId: get().selectedModelId || models[0]?.id || null
