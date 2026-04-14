@@ -3,15 +3,17 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev -p 4000",
+    "dev": "npm run clean && next dev -p 4000",
+    "clean": "node -e \"const fs = require('fs'); [' .next', 'node_modules/.cache'].forEach(p => fs.rmSync(p.trim(), { recursive: true, force: true }))\"",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "next lint"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.82.0",
     "@duckdb/duckdb-wasm": "^1.32.0",
     "@tanstack/react-table": "^8.21.3",
+    "lucide-react": "^1.8.0",
     "next": "15.5.14",
     "openai": "^4.104.0",
     "papaparse": "^5.5.3",

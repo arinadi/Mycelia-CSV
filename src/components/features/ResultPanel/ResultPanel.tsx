@@ -5,11 +5,10 @@ import { useAppStore } from '@/lib/store';
 import { SchemaPreview } from '@/components/features/SchemaPreview/SchemaPreview';
 import { ResultTable } from './ResultTable';
 import { ResultChart } from './ResultChart';
-import { downloadCsv, slugify } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
 
 export function ResultPanel() {
-  const { file, parseStatus, dbStatus, queryResult, executionTime, userPrompt } = useAppStore();
+  const { file, parseStatus, dbStatus, queryResult, executionTime } = useAppStore();
   const [activeTab, setActiveTab] = React.useState<'table' | 'chart'>('table');
 
   const showSchema = file && (parseStatus === 'done' || parseStatus === 'parsing') && dbStatus !== 'ready';
@@ -58,26 +57,43 @@ export function ResultPanel() {
               </div>
             </div>
 
-            <div className="text-right flex items-center gap-4">
-              <p className="text-[10px] uppercase font-bold text-muted tracking-widest">
-                {queryResult.rowCount.toLocaleString()} rows • {executionTime}ms
+            <div className="flex items-center gap-2">
+              <p className="text-[10px] uppercase font-bold text-muted tracking-widest mr-2">
+                {((queryResult as { totalCount?: number; rowCount?: number }).totalCount ?? (queryResult as { totalCount?: number; rowCount?: number }).rowCount ?? 0).toLocaleString()} rows • {executionTime}ms
               </p>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="h-7 text-[10px] border border-border/50"
-                onClick={() => {
-                  const filename = slugify(userPrompt || 'result') + '-' + new Date().toISOString().split('T')[0];
-                  downloadCsv(queryResult.rows, queryResult.columns, filename);
-                }}
-              >
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="mr-1">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                  <polyline points="7 10 12 15 17 10" />
-                  <line x1="12" y1="15" x2="12" y2="3" />
-                </svg>
-                Export CSV
-              </Button>
+              
+              <div className="flex items-center bg-bg-base/30 rounded-lg p-0.5 border border-border/50">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-7 text-[10px] hover:text-accent"
+                  onClick={() => useAppStore.getState().exportQueryResult('csv')}
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="mr-1 opacity-70">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <polyline points="7 10 12 15 17 10" />
+                    <line x1="12" y1="15" x2="12" y2="3" />
+                  </svg>
+                  CSV
+                </Button>
+                
+                <div className="w-[1px] h-3 bg-border/50 mx-0.5" />
+
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-7 text-[10px] hover:text-accent"
+                  onClick={() => useAppStore.getState().exportQueryResult('parquet')}
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="mr-1 opacity-70">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                    <polyline points="14 2 14 8 20 8" />
+                    <line x1="12" y1="18" x2="12" y2="12" />
+                    <polyline points="9 15 12 12 15 15" />
+                  </svg>
+                  PARQUET
+                </Button>
+              </div>
             </div>
           </div>
 

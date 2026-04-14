@@ -4,6 +4,8 @@ import "./globals.css";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { Sidebar } from "@/components/features/Sidebar/Sidebar";
+import { ErrorBoundary } from "@/components/layout/ErrorBoundary";
+import { RawDataModal } from "@/components/features/DataSourcePanel/RawDataModal";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -30,14 +32,17 @@ export default function RootLayout({
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen flex flex-col`}>
         <Header />
         <div className="flex-1 flex overflow-hidden">
-          <aside className="w-[300px] flex-shrink-0 hidden lg:block">
-            <Sidebar />
-          </aside>
-          <main className="flex-1 flex flex-col overflow-hidden">
-            {children}
-          </main>
+          <ErrorBoundary>
+            <aside className="w-[300px] flex-shrink-0 hidden lg:block">
+              <Sidebar />
+            </aside>
+            <main className="flex-1 flex flex-col overflow-hidden p-6">
+              {children}
+            </main>
+          </ErrorBoundary>
         </div>
         <Footer />
+        <RawDataModal />
       </body>
     </html>
   );

@@ -10,13 +10,14 @@ Mycelia CSV Reporter is a local-first, privacy-focused CSV analysis tool. It use
 - **AI**: Dynamic (Gemini, OpenAI, Anthropic) via fetch
 - **UI**: Vanilla CSS + Tailwind, Radix UI-inspired components
 
-## Current Status (End of Phase 3)
+## Current Status (End of Phase 4 - COMPLETED)
 - [x] Port 4000 configured
 - [x] DuckDB-WASM integration complete
-- [x] AI SQL Generation with dynamic model fetching
-- [x] Gemini v1beta support
-- [x] Results Table & Auto-Charting
-- [x] Session History & CSV Export
+- [x] AI SQL Auto-Correction (retry loop on SQL errors)
+- [x] Advanced Charting overrides (UI for type/axis)
+- [x] Global Error Boundary for recovery
+- [x] Accessibility (A11y) & UX Polish complete
+- [x] Zero TS errors & clean production build
 
 ## Key File Locations
 - `src/lib/duckdb.ts`: Analytical engine logic

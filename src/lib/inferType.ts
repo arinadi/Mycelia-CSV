@@ -30,6 +30,40 @@ export function inferColumnType(values: string[]): ColumnType {
   return 'string';
 }
 
+/**
+ * Detects if a string column contains specialized formats like JSON or PHP Serialized.
+ */
+export function detectColumnFormat(values: string[]): 'json' | 'serialized' | 'text' {
+  const nonNullValues = values.filter(v => v !== null && v !== undefined && v.trim() !== '');
+  if (nonNullValues.length === 0) return 'text';
+
+  let jsonCount = 0;
+  let serialCount = 0;
+
+  nonNullValues.forEach(v => {
+    const trimmed = v.trim();
+    
+    // JSON Detection: Starts/ends with {} or []
+    if ((trimmed.startsWith('{') && trimmed.endsWith('}')) || (trimmed.startsWith('[') && trimmed.endsWith(']'))) {
+      try {
+        JSON.parse(trimmed); // verify validity
+        jsonCount++;
+      } catch {
+        // Not valid JSON
+      }
+    } 
+    // PHP Serialized Detection: basic signature check
+    else if (/^[aOs]:[0-9]+:.*[;}]/.test(trimmed)) {
+      serialCount++;
+    }
+  });
+
+  if (jsonCount > nonNullValues.length * 0.5) return 'json';
+  if (serialCount > nonNullValues.length * 0.5) return 'serialized';
+
+  return 'text';
+}
+
 function guessType(val: string): ColumnType {
   const trimmed = val.trim();
   if (trimmed === '') return 'unknown';

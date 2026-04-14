@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import type { ApiProvider, ColumnType, CsvColumn, ParseStatus, AiModel } from './types';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import type { ApiProvider, ColumnType, CsvColumn, ParseStatus, AiModel, HistoryItem } from './types';
 
 interface AppState {
   // API Config
@@ -19,18 +20,18 @@ interface AppState {
   userPrompt: string;
   generatedSql: string;
   isAnalyzing: boolean;
-  queryResult: { rows: Record<string, unknown>[]; columns: string[]; rowCount: number } | null;
+  queryResult: { 
+    rows: Record<string, unknown>[]; 
+    columns: string[]; 
+    totalCount: number;
+    currentPage: number;
+    pageSize: number;
+  } | null;
   queryError: string | null;
   executionTime: number | null;
 
   // History
-  history: {
-    id: string;
-    prompt: string;
-    sql: string;
-    result: { rows: Record<string, unknown>[]; columns: string[]; rowCount: number };
-    timestamp: number;
-  }[];
+  history: HistoryItem[];
 
   // CSV Data
   file: File | null;
@@ -40,6 +41,9 @@ interface AppState {
   schema: CsvColumn[];
   parseStatus: ParseStatus;
   parseError: string | null;
+  sampleRows: Record<string, unknown>[];
+  isRawDataOpen: boolean;
+  rawData: Record<string, unknown>[];
 
   // Actions
   setProvider: (p: ApiProvider) => void;
@@ -55,6 +59,7 @@ interface AppState {
   setSchema: (columns: CsvColumn[]) => void;
   setTotalRows: (count: number) => void;
   setParseStatus: (status: ParseStatus, error?: string) => void;
+  setSampleRows: (rows: Record<string, unknown>[]) => void;
   updateColumnType: (colName: string, type: ColumnType) => void;
   resetCsv: () => void;
   initDB: () => Promise<void>;
@@ -63,11 +68,18 @@ interface AppState {
   setUserPrompt: (p: string) => void;
   setGeneratedSql: (sql: string) => void;
   runAiQuery: () => Promise<void>;
-  executeSql: (sql: string) => Promise<void>;
+  executeSql: (sql: string, isAutoRetry?: boolean, retryCount?: number) => Promise<void>;
+  goToPage: (page: number) => Promise<void>;
   loadHistoryItem: (id: string) => void;
+  openRawData: () => Promise<void>;
+  closeRawData: () => void;
+  exportQueryResult: (format: 'csv' | 'parquet') => Promise<void>;
+  fetchMetadata: () => Promise<void>;
 }
 
-export const useAppStore = create<AppState>()((set, get) => ({
+export const useAppStore = create<AppState>()(
+  persist(
+    (set, get) => ({
   provider: 'anthropic',
   baseUrl: 'https://api.anthropic.com/v1',
   apiKey: '',
@@ -94,6 +106,9 @@ export const useAppStore = create<AppState>()((set, get) => ({
   schema: [],
   parseStatus: 'idle',
   parseError: null,
+  sampleRows: [],
+  isRawDataOpen: false,
+  rawData: [],
 
   setProvider: (p) => {
     let baseUrl = '';
@@ -143,11 +158,8 @@ export const useAppStore = create<AppState>()((set, get) => ({
           set({ 
             isValid: true, 
             availableModels: models,
-            selectedModelId: models[0]?.id || null
+            selectedModelId: get().selectedModelId || models[0]?.id || null
           });
-          sessionStorage.setItem('csv_reporter_api_key', apiKey);
-          sessionStorage.setItem('csv_reporter_api_provider', provider);
-          sessionStorage.setItem('csv_reporter_api_base_url', baseUrl);
         } else {
           const errData = await res.json().catch(() => ({}));
           throw new Error(errData.error?.message || `Error ${res.status}`);
@@ -179,9 +191,6 @@ export const useAppStore = create<AppState>()((set, get) => ({
 
         if (res.ok) {
           set({ isValid: true });
-          sessionStorage.setItem('csv_reporter_api_key', apiKey);
-          sessionStorage.setItem('csv_reporter_api_provider', provider);
-          sessionStorage.setItem('csv_reporter_api_base_url', baseUrl);
           await fetchModels();
         } else {
           const errData = (await res.json().catch(() => ({}))) as { error?: { message?: string } };
@@ -225,8 +234,6 @@ export const useAppStore = create<AppState>()((set, get) => ({
           });
         }
       } else if (provider === 'anthropic') {
-         // Anthropic doesn't have a public models list endpoint easily accessible via browser without CORS
-         // Hardcode common ones for now as per plan
          const models = [
            { id: 'claude-3-5-sonnet-20241022', name: 'Claude 3.5 Sonnet' },
            { id: 'claude-3-5-haiku-20241022', name: 'Claude 3.5 Haiku' },
@@ -241,26 +248,10 @@ export const useAppStore = create<AppState>()((set, get) => ({
 
   clear: () => {
     set({ apiKey: '', isValid: null, validationError: null, availableModels: [], selectedModelId: null });
-    sessionStorage.removeItem('csv_reporter_api_key');
-    sessionStorage.removeItem('csv_reporter_api_provider');
-    sessionStorage.removeItem('csv_reporter_api_base_url');
   },
 
   initSession: () => {
-    if (typeof window !== 'undefined') {
-      const storedKey = sessionStorage.getItem('csv_reporter_api_key');
-      const storedProvider = sessionStorage.getItem('csv_reporter_api_provider') as ApiProvider | null;
-      const storedBaseUrl = sessionStorage.getItem('csv_reporter_api_base_url');
-      if (storedKey) {
-        set({
-          apiKey: storedKey,
-          provider: storedProvider || 'anthropic',
-          baseUrl: storedBaseUrl || (storedProvider === 'gemini' ? 'https://generativelanguage.googleapis.com/v1beta' : storedProvider === 'openai' ? 'https://api.openai.com/v1' : 'https://api.anthropic.com/v1'),
-          isValid: true,
-        });
-        get().fetchModels();
-      }
-    }
+    // Legacy support: intentionally left empty as persistence handles this now
   },
 
   setFile: (f: File) => {
@@ -271,7 +262,8 @@ export const useAppStore = create<AppState>()((set, get) => ({
       parseStatus: 'idle',
       parseError: null,
       schema: [],
-      totalRows: 0
+      totalRows: 0,
+      sampleRows: []
     });
   },
 
@@ -279,21 +271,14 @@ export const useAppStore = create<AppState>()((set, get) => ({
     set({ schema: columns });
   },
 
-  setTotalRows: (count: number) => {
-    set({ totalRows: count });
-  },
-
-  setParseStatus: (status: ParseStatus, error?: string) => {
-    set({ parseStatus: status, parseError: error || null });
-  },
-
-  updateColumnType: (colName: string, type: ColumnType) => {
-    set((state) => ({
+  setTotalRows: (count: number) => set({ totalRows: count }),
+  setParseStatus: (status: ParseStatus, error?: string) => set({ parseStatus: status, parseError: error || null }),
+  setSampleRows: (rows: Record<string, unknown>[]) => set({ sampleRows: rows }),
+  updateColumnType: (colName: string, type: ColumnType) => set((state) => ({
       schema: state.schema.map((col) => 
         col.name === colName ? { ...col, type } : col
       )
-    }));
-  },
+    })),
 
   resetCsv: () => {
     set({
@@ -316,10 +301,52 @@ export const useAppStore = create<AppState>()((set, get) => ({
       const { initDuckDB } = await import('./duckdb');
       await initDuckDB(file);
       set({ dbStatus: 'ready' });
+      await get().fetchMetadata();
     } catch (e: unknown) {
       const err = e as Error;
       console.error('DuckDB init failed', err);
       set({ dbStatus: 'error', dbError: err.message });
+    }
+  },
+
+  fetchMetadata: async () => {
+    try {
+      const { getTableSchema } = await import('./duckdb');
+      const { detectColumnFormat } = await import('./inferType');
+      const metadata = await getTableSchema();
+      
+      const mappedSchema = metadata.columns.map(col => {
+        // Map DuckDB types to our app types
+        let type: ColumnType = 'string';
+        const rawType = col.type.toUpperCase();
+        
+        if (rawType.includes('INT') || rawType.includes('DOUBLE') || rawType.includes('FLOAT') || rawType.includes('DECIMAL')) {
+          type = 'number';
+        } else if (rawType.includes('BOOL')) {
+          type = 'boolean';
+        } else if (rawType.includes('DATE') || rawType.includes('TIME')) {
+          type = 'date';
+        }
+
+        const sampleValues = metadata.sampleRows.map(r => String(r[col.name]));
+
+        return {
+          name: col.name,
+          type,
+          rawType: col.type, // Map the raw DuckDB type string
+          format: type === 'string' ? detectColumnFormat(sampleValues) : 'text',
+          sampleValues: sampleValues.slice(0, 3)
+        };
+      });
+
+      set({
+        schema: mappedSchema,
+        totalRows: metadata.totalRows,
+        sampleRows: metadata.sampleRows.slice(0, 5),
+        parseStatus: 'done'
+      });
+    } catch (e) {
+      console.error('Failed to fetch metadata', e);
     }
   },
 
@@ -333,9 +360,15 @@ export const useAppStore = create<AppState>()((set, get) => ({
     set({ isAnalyzing: true, queryError: null });
     try {
       const { generateSQL } = await import('./ai-service');
+      const { provider, apiKey, baseUrl, selectedModelId } = get();
       const sql = await generateSQL(userPrompt, {
-        columns: schema.map(c => ({ name: c.name, type: c.type })),
-        sampleRows: schema[0]?.sampleValues.map(v => ({ [schema[0].name]: v })) || []
+        columns: schema.map(c => ({ name: c.name, type: c.rawType || c.type })),
+        sampleRows: get().sampleRows
+      }, {
+        provider,
+        apiKey,
+        baseUrl,
+        selectedModelId: selectedModelId || ''
       });
       set({ generatedSql: sql, isAnalyzing: false });
     } catch (e: unknown) {
@@ -345,49 +378,222 @@ export const useAppStore = create<AppState>()((set, get) => ({
     }
   },
 
-  executeSql: async (sql: string) => {
-    const { dbStatus, userPrompt } = get();
+  executeSql: async (sql: string, isAutoRetry: boolean = false, retryCount: number = 0) => {
+    const { dbStatus, userPrompt, schema } = get();
     if (dbStatus !== 'ready') return;
 
-    set({ isAnalyzing: true, queryError: null });
+    if (!isAutoRetry) {
+      set({ isAnalyzing: true, queryError: null });
+    }
+    
     const start = performance.now();
     try {
-      const { runQuery } = await import('./duckdb');
-      const result = await runQuery(sql);
+      const { getQueryMetadata, fetchPaginatedRows } = await import('./duckdb');
+      
+      // 1. Get metadata (columns and total count) using the new view-based approach
+      const { columns, rowCount } = await getQueryMetadata(sql);
+      
+      // 2. Fetch the first page (default 50 rows)
+      const pageSize = 50;
+      const initialRows = await fetchPaginatedRows(pageSize, 0);
+      
       const end = performance.now();
       const executionTime = Math.round(end - start);
       
+      const queryResult = {
+        rows: initialRows,
+        columns,
+        totalCount: rowCount,
+        currentPage: 0,
+        pageSize
+      };
+
       set((state) => ({ 
-        queryResult: result, 
+        queryResult, 
         isAnalyzing: false, 
         executionTime,
+        queryError: null,
         history: [
           {
             id: crypto.randomUUID(),
             prompt: userPrompt,
             sql,
-            result,
-            timestamp: Date.now()
+            result: { 
+              rows: initialRows, 
+              columns, 
+              totalCount: rowCount,
+              currentPage: 0,
+              pageSize
+            }, 
+            timestamp: Date.now(),
+            executionTime
           },
           ...state.history
         ]
       }));
     } catch (e: unknown) {
       const err = e as Error;
-      console.error('SQL execution failed', err);
-      set({ isAnalyzing: false, queryError: err.message });
+      
+      if (retryCount < 2) {
+        console.warn(`DuckDB execution failed. Auto-retrying (Attempt ${retryCount + 1}/2)...`, err);
+        set({ queryError: `DuckDB Error: ${err.message}. Auto-fixing SQL (Attempt ${retryCount + 1}/2)...` });
+        
+        try {
+          const { generateSQL, getSystemPrompt } = await import('./ai-service');
+          const systemRules = getSystemPrompt({
+             columns: schema.map(c => ({ name: c.name, type: c.rawType || c.type })),
+             sampleRows: get().sampleRows
+          });
+
+          const fixPrompt = `${systemRules}\n\nFIX REQUIRED: The previous query failed.\n` +
+            `Error: ${err.message}\n` +
+            `Failed SQL: ${sql}\n\n` +
+            `Please provide the CORRECTED SQL. \n` +
+            `IMPORTANT: You MUST still follow all rules in the system prompt above, including READABLE DATE FORMATTING and JSON EXTRACTION rules.`;
+          
+          const { provider, apiKey, baseUrl, selectedModelId } = get();
+          const newSql = await generateSQL(fixPrompt, {
+             columns: schema.map(c => ({ name: c.name, type: c.rawType || c.type })),
+             sampleRows: get().sampleRows
+          }, {
+            provider,
+            apiKey,
+            baseUrl,
+            selectedModelId: selectedModelId || ''
+          });
+          
+          set({ generatedSql: newSql });
+          await get().executeSql(newSql, true, retryCount + 1);
+        } catch (aiErr) {
+           console.error('AI Fix generation failed', aiErr);
+           set({ isAnalyzing: false, queryError: err.message });
+        }
+      } else {
+        console.error('SQL execution failed after retries', err);
+        set({ isAnalyzing: false, queryError: err.message });
+      }
+    }
+  },
+
+  goToPage: async (page: number) => {
+    const { queryResult, dbStatus } = get();
+    if (!queryResult || dbStatus !== 'ready') return;
+    
+    set({ isAnalyzing: true });
+    try {
+      const { fetchPaginatedRows } = await import('./duckdb');
+      const offset = page * queryResult.pageSize;
+      const rows = await fetchPaginatedRows(queryResult.pageSize, offset);
+      
+      set({
+        queryResult: {
+          ...queryResult,
+          rows,
+          currentPage: page
+        },
+        isAnalyzing: false
+      });
+    } catch (e) {
+      console.error('Failed to fetch page', e);
+      set({ isAnalyzing: false, queryError: (e as Error).message });
     }
   },
 
   loadHistoryItem: (id) => {
     const item = get().history.find((h) => h.id === id);
     if (item) {
+      // Migrate structure for legacy history items
+      const result = {
+        ...item.result,
+        totalCount: item.result.totalCount ?? (item.result as unknown as { rowCount?: number }).rowCount ?? 0,
+        currentPage: item.result.currentPage ?? 0,
+        pageSize: item.result.pageSize ?? 50,
+      };
+
       set({
         userPrompt: item.prompt,
         generatedSql: item.sql,
-        queryResult: item.result,
+        queryResult: result as unknown as AppState['queryResult'], // Safely cast migrated structure to state type
+        executionTime: item.executionTime,
         queryError: null
       });
     }
-  }
-}));
+  },
+  
+  exportQueryResult: async (format) => {
+    const { generatedSql, queryResult, userPrompt } = get();
+    if (!generatedSql || !queryResult) return;
+    
+    set({ isAnalyzing: true });
+    try {
+      const { exportToFormat } = await import('./duckdb');
+      const blob = await exportToFormat(generatedSql, format);
+      
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const dateStr = new Date().toISOString().split('T')[0].replace(/-/g, '');
+      const extension = format === 'parquet' ? 'parquet' : 'csv';
+      
+      a.href = url;
+      a.download = `${userPrompt.slice(0, 30).replace(/\s+/g, '_')}_${dateStr}.${extension}`;
+      a.click();
+      
+      URL.revokeObjectURL(url);
+      set({ isAnalyzing: false });
+    } catch (e) {
+      console.error('Export failed', e);
+      set({ isAnalyzing: false, queryError: `Export failed: ${(e as Error).message}` });
+    }
+  },
+
+  openRawData: async () => {
+    const { dbStatus } = get();
+    if (dbStatus !== 'ready') return;
+
+    set({ isRawDataOpen: true });
+    try {
+      const { runQuery } = await import('./duckdb');
+      const result = await runQuery('SELECT * FROM data LIMIT 100');
+      // Ensure BigInts are converted to numbers for UI safety where possible, 
+      // or at least handled consistently
+      const safeRows = result.rows.map(row => {
+        const newRow: Record<string, unknown> = {};
+        for (const [k, v] of Object.entries(row)) {
+          newRow[k] = typeof v === 'bigint' ? Number(v) : v;
+        }
+        return newRow;
+      });
+      set({ rawData: safeRows });
+    } catch (e) {
+      console.error('Failed to fetch raw data', e);
+      set({ isRawDataOpen: false });
+    }
+  },
+
+  closeRawData: () => set({ isRawDataOpen: false, rawData: [] }),
+}), {
+      name: 'csv-reporter-storage',
+      storage: createJSONStorage(() => localStorage),
+      partialize: (state) => ({
+        provider: state.provider,
+        baseUrl: state.baseUrl,
+        apiKey: state.apiKey,
+        selectedModelId: state.selectedModelId,
+        isValid: state.isValid,
+        // Strip rows from history items to save localStorage quota
+        history: state.history.map(item => ({
+          ...item,
+          result: {
+            ...item.result,
+            rows: [] as Record<string, unknown>[]
+          }
+        })),
+      }),
+      onRehydrateStorage: () => (state) => {
+        if (state?.isValid && state.apiKey) {
+           state.fetchModels();
+        }
+      }
+    }
+  )
+);

@@ -7,8 +7,11 @@ import { Badge } from '@/components/ui/Badge';
 import { KeyManagerModal } from '@/components/features/KeyManager/KeyManager';
 
 export function Header() {
-  const { isValid } = useAppStore();
+  const { isValid, selectedModelId, availableModels } = useAppStore();
   const [isKeyModalOpen, setIsKeyModalOpen] = useState(false);
+
+  const activeModel = availableModels.find(m => m.id === selectedModelId);
+  const modelName = activeModel?.name || selectedModelId;
 
   return (
     <>
@@ -49,8 +52,13 @@ export function Header() {
         <div className="flex items-center">
           <button onClick={() => setIsKeyModalOpen(true)}>
             {isValid ? (
-              <Badge variant="success" className="cursor-pointer hover:bg-emerald-500/20 px-3 py-1.5 border border-emerald-500/20">
-                 API Connected
+              <Badge variant="success" className="cursor-pointer hover:bg-emerald-500/20 px-3 py-1.5 border border-emerald-500/20 flex items-center gap-2">
+                 <span>API Connected</span>
+                 {modelName && (
+                   <span className="opacity-60 text-[10px] border-l border-emerald-500/30 pl-2 ml-1 uppercase tracking-wider font-mono">
+                     {modelName}
+                   </span>
+                 )}
               </Badge>
             ) : (
               <Badge variant="danger" className="cursor-pointer hover:bg-red-500/20 px-3 py-1.5 font-medium flex items-center gap-2 border border-red-500/20">

@@ -49,8 +49,9 @@ export function KeyManagerModal({ isOpen, onClose }: KeyManagerModalProps) {
     <Modal isOpen={isOpen} onClose={onClose} title="Configure API Key">
       <div className="space-y-6">
         <div>
-          <label className="block text-sm font-medium text-muted mb-2">AI Provider</label>
+          <label htmlFor="provider-select" className="block text-sm font-medium text-muted mb-2">AI Provider</label>
           <Select
+            id="provider-select"
             value={provider}
             onChange={(e) => setProvider(e.target.value as ApiProvider)}
             className="w-full"
@@ -62,8 +63,9 @@ export function KeyManagerModal({ isOpen, onClose }: KeyManagerModalProps) {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-muted mb-2">Base URL</label>
+          <label htmlFor="base-url-input" className="block text-sm font-medium text-muted mb-2">Base URL</label>
           <Input
+            id="base-url-input"
             placeholder="e.g. https://api.openai.com/v1"
             value={baseUrl}
             onChange={(e) => setBaseUrl(e.target.value)}
@@ -71,8 +73,9 @@ export function KeyManagerModal({ isOpen, onClose }: KeyManagerModalProps) {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-muted mb-2">API Key</label>
+          <label htmlFor="api-key-input" className="block text-sm font-medium text-muted mb-2">API Key</label>
           <Input
+            id="api-key-input"
             type="password"
             placeholder={`Paste your ${provider === 'anthropic' ? 'Anthropic' : provider === 'openai' ? 'OpenAI' : 'Gemini'} API key`}
             value={apiKey}
@@ -85,8 +88,9 @@ export function KeyManagerModal({ isOpen, onClose }: KeyManagerModalProps) {
 
         {isValid === true && availableModels.length > 0 && (
           <div>
-            <label className="block text-sm font-medium text-muted mb-2">Model</label>
+            <label htmlFor="model-select" className="block text-sm font-medium text-muted mb-2">Model</label>
             <Select
+              id="model-select"
               value={selectedModelId || ''}
               onChange={(e) => setSelectedModelId(e.target.value)}
               className="w-full"
