@@ -27,6 +27,24 @@ npm run dev
 
 Open [http://localhost:4000](http://localhost:4000) with your browser to see the result. (Note: The default port has been changed to 4000).
 
+## Test Data Generation
+
+The project includes a utility script to generate synthetic CSV data with complex JSON and PHP Serialized structures for testing.
+
+**Requirements**: Python 3.x
+
+### Generate Sample Data (Small)
+Generates 100 rows of diverse data:
+```bash
+python scripts/generate_test_data.py --rows 100 --output sample_data.csv
+```
+
+### Stress Test Generation (Large)
+Generates 1 million rows for performance testing (results in ~800MB CSV):
+```bash
+python scripts/generate_test_data.py --rows 1000000 --output stress_test_1m.csv
+```
+
 ## Environment & Security
 - **No `.env` required**: This app is designed to be fully client-side.
 - **CORS Handling**: When using custom OpenAI endpoints, ensure the endpoint supports CORS requests from your origin.
