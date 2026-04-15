@@ -1,5 +1,3 @@
-"use client";
-
 import React, { useRef, useState } from 'react';
 import { useAppStore } from '@/lib/store';
 import { inferColumnType, detectColumnFormat } from '@/lib/inferType';
@@ -48,7 +46,7 @@ export function DataSourcePanel() {
     setFile(file);
     setParseStatus('parsing');
 
-    const worker = new Worker(new URL('@/workers/csv-parser.worker.ts', import.meta.url));
+    const worker = new Worker(new URL('../../../workers/csv-parser.worker.ts', import.meta.url));
     
     worker.postMessage({ file });
 

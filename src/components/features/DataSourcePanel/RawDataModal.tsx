@@ -1,5 +1,3 @@
-"use client";
-
 import React, { useEffect, useState } from 'react';
 import { useAppStore } from '@/lib/store';
 import { X, Table, Copy, Check, ChevronLeft, ChevronRight, Maximize2, Loader2, ChevronsLeft, ChevronsRight } from 'lucide-react';

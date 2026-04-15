@@ -1,5 +1,3 @@
-"use client";
-
 import React from 'react';
 import { useAppStore } from '@/lib/store';
 import { SchemaPreview } from '@/components/features/SchemaPreview/SchemaPreview';

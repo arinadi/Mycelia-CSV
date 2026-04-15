@@ -1,51 +1,40 @@
-# Walkthrough - Phase 3: Analytical Engine & AI Integration
+# Walkthrough: Migrate Next.js 15 → Vite 6
 
-We have successfully completed Phase 3 of the **Mycelia CSV Reporter** project. This phase focused on integrating the local analytical engine (DuckDB-WASM) and implementing the AI-powered natural language to SQL layer.
+## Summary
+Migrated the entire application from Next.js 15 (static export) to Vite 6 + React 19 SPA. The app is 100% client-side so Next.js SSR/SSG overhead was unnecessary and caused Vercel deployment failures.
 
-## 🚀 Key Achievements
+## Changes
 
-### 1. Analytical Engine (DuckDB-WASM)
-- **Local-First Processing**: Integrated DuckDB-WASM to handle large CSV files (up to 2GB) entirely in the browser.
-- **Lazy Initialization**: The engine only loads when the user confirms the schema, preserving resources.
-- **WASM-Optimized**: Using JsDelivr CDN for efficient WASM bundle delivery with modern browser features.
+### New Files
+- `index.html` — Vite SPA entrypoint with Google Fonts (Geist) loaded via `<link>` tags
+- `vite.config.ts` — Vite config with React plugin and tsconfig path alias support
+- `src/main.tsx` — React DOM mount point (replaces Next.js App Router bootstrap)
+- `src/App.tsx` — Root component merging `layout.tsx` + `page.tsx`
+- `src/vite-env.d.ts` — Vite client type declarations
+- `src/globals.css` — Moved from `src/app/globals.css`
 
-### 2. AI SQL Generation & Dynamic Models
-- **Dynamic Model Selection**: The app now fetches available models directly from the provider (OpenAI/Gemini).
-- **Custom Endpoints**: Full support for OpenAI-compatible proxies and custom base URLs.
-- **Gemini Specialist**: Implemented the specialized `v1beta` model listing protocol for Google Gemini.
-- **SQL Safety**: Integrated basic guards to prevent destructive SQL commands (DROP, DELETE, etc.).
+### Deleted Files
+- `next.config.ts` — Next.js configuration
+- `next-env.d.ts` — Next.js type declarations
+- `src/app/layout.tsx` — Replaced by `src/App.tsx`
+- `src/app/page.tsx` — Merged into `src/App.tsx`
+- `src/app/globals.css` — Moved to `src/globals.css`
+- `public/next.svg`, `public/vercel.svg` — Unused branding assets
 
-### 3. Visualization & Results
-- **Rich Data Table**: Implemented a high-performance, paginated result table using **TanStack Table v8**.
-- **Auto-Chart Inference**: Automatic selection of Bar, Line, or Pie charts based on the query result shape.
-- **Export Capabilities**: Direct-to-browser CSV export for generated reports.
+### Modified Files
+- `package.json` — Removed `next`, `eslint-config-next`. Added `vite`, `@vitejs/plugin-react`, `vite-tsconfig-paths`. Updated scripts.
+- `tsconfig.json` — Target ES2020, jsx react-jsx, removed Next.js plugin
+- `postcss.config.mjs` — Changed Tailwind plugin from string to function invocation (Vite requirement)
+- `eslint.config.mjs` — Replaced `next/core-web-vitals` with `eslint:recommended`
+- `vercel.json` — Added `framework: vite`, SPA rewrites, expanded CSP for Google Fonts
+- `.gitignore` — Updated for Vite (`dist/` instead of `.next/`, `out/`)
+- `agent.md` — Updated tech stack, file locations, and commands
+- 12 component files — Removed `"use client"` directive (not needed in Vite)
+- `DataSourcePanel.tsx` — Worker URL changed from `@/` alias to relative path (Vite requirement)
 
-### 4. Session Management
-- **Query History**: A dedicated sidebar tracks your session queries, allowing you to quickly jump back to previous results.
-- **Non-Persistent Security**: All API keys and session data are stored in `sessionStorage` or application memory only.
-
-## 📁 Changes
-
-### Core Logic
-- [duckdb.ts](file:///d:/csv_reporter/src/lib/duckdb.ts): WASM initialization and query execution.
-- [ai-service.ts](file:///d:/csv_reporter/src/lib/ai-service.ts): Unified AI interface with dynamic model fetching.
-- [store.ts](file:///d:/csv_reporter/src/lib/store.ts): Expanded with DuckDB, AI, and History slices.
-
-### UI Components
-- [KeyManager.tsx](file:///d:/csv_reporter/src/components/features/KeyManager/KeyManager.tsx): Added Base URL and dynamic Model dropdown.
-- [QueryPanel.tsx](file:///d:/csv_reporter/src/components/features/QueryPanel/QueryPanel.tsx): Natural language input, SQL preview, and "Thinking" state.
-- [ResultPanel.tsx](file:///d:/csv_reporter/src/components/features/ResultPanel/ResultPanel.tsx): Orchestrates Table, Chart, and Export actions.
-- [Sidebar.tsx](file:///d:/csv_reporter/src/components/features/Sidebar/Sidebar.tsx): Session history tracker.
-
-## 🛠️ Verification Results
-
-- ✅ **Build Success**: `npm run build` passed successfully (Static Export).
-- ✅ **Type Safety**: `tsc --noEmit` passed with no errors.
-- ✅ **Port Check**: Dev server is configured to run on Port **4000**.
-- ✅ **Linting**: All ESLint errors and warnings resolved.
-
-> [!IMPORTANT]
-> **Port 4000**: Please remember that the dev server now runs on `http://localhost:4000`.
-
-> [!TIP]
-> **Gemini Support**: When using Gemini, ensure your API key has access to the `v1beta` models list endpoint.
+## Impact
+- **Zero feature changes** — All functionality preserved
+- **Dependencies**: ~500+ → 277 packages
+- **Dev server**: ~3-5s → 591ms startup
+- **Build**: ~15-30s → 4.39s
+- **Deploy target**: Vercel static SPA via `dist/`

@@ -1,5 +1,3 @@
-"use client";
-
 import React, { useState, useRef } from 'react';
 import { Button } from '@/components/ui/Button';
 import { useAppStore } from '@/lib/store';
