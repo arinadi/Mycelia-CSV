@@ -286,7 +286,9 @@ export function DataSourcePanel() {
           <div className="flex flex-col items-center py-8" aria-live="polite">
             <div className="h-12 w-12 border-4 border-accent border-t-transparent rounded-full animate-spin mb-6 shadow-lg shadow-accent/20" />
             <p className="text-base font-bold text-text mb-1">Processing Dataset...</p>
-              We&apos;re analyzing the schema and streaming the first million rows into memory.
+            <p className="text-xs text-muted text-center max-w-[200px] leading-relaxed px-4">
+              Analyzing schema and indexing records for high-speed local queries.
+            </p>
           </div>
         ) : (
           <>

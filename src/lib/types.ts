@@ -38,4 +38,5 @@ export interface HistoryItem {
   result: QueryResult;
   timestamp: number;
   executionTime: number;
+  isStarred?: boolean;
 }

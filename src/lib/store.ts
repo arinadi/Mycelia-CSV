@@ -47,6 +47,7 @@ interface AppState {
   rawData: Record<string, unknown>[];
   rawDataPage: number;
   rawDataPageSize: number;
+  isSidebarCollapsed: boolean;
 
   // Actions
   setProvider: (p: ApiProvider) => void;
@@ -57,6 +58,7 @@ interface AppState {
   fetchModels: () => Promise<void>;
   clear: () => void;
   initSession: () => void;
+  toggleSidebar: () => void;
 
   setFile: (f: File) => void;
   setSchema: (columns: CsvColumn[]) => void;
@@ -74,6 +76,9 @@ interface AppState {
   executeSql: (sql: string, isAutoRetry?: boolean, retryCount?: number) => Promise<void>;
   goToPage: (page: number) => Promise<void>;
   loadHistoryItem: (id: string) => void;
+  toggleStarHistoryItem: (id: string) => void;
+  deleteHistoryItem: (id: string) => void;
+  clearHistory: (onlyUnstarred?: boolean) => void;
   // Raw Data Actions
   openRawData: () => Promise<void>;
   closeRawData: () => void;
@@ -119,6 +124,7 @@ export const useAppStore = create<AppState>()(
   rawData: [],
   rawDataPage: 0,
   rawDataPageSize: 50,
+  isSidebarCollapsed: false,
 
   setProvider: (p) => {
     let baseUrl = '';
@@ -262,6 +268,10 @@ export const useAppStore = create<AppState>()(
 
   initSession: () => {
     // Legacy support: intentionally left empty as persistence handles this now
+  },
+
+  toggleSidebar: () => {
+    set((state) => ({ isSidebarCollapsed: !state.isSidebarCollapsed }));
   },
 
   setFile: (f: File) => {
@@ -436,7 +446,8 @@ export const useAppStore = create<AppState>()(
               pageSize
             }, 
             timestamp: Date.now(),
-            executionTime
+            executionTime,
+            isStarred: false
           },
           ...state.history
         ]
@@ -528,6 +539,28 @@ export const useAppStore = create<AppState>()(
         queryError: null
       });
     }
+  },
+
+  toggleStarHistoryItem: (id) => {
+    set((state) => ({
+      history: state.history.map((item) => 
+        item.id === id ? { ...item, isStarred: !item.isStarred } : item
+      )
+    }));
+  },
+
+  deleteHistoryItem: (id) => {
+    set((state) => ({
+      history: state.history.filter((item) => item.id !== id)
+    }));
+  },
+
+  clearHistory: (onlyUnstarred = false) => {
+    set((state) => ({
+      history: onlyUnstarred 
+        ? state.history.filter((item) => item.isStarred) 
+        : []
+    }));
   },
   
   exportQueryResult: async (format) => {

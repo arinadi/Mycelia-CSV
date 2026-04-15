@@ -33,7 +33,7 @@ export default function RootLayout({
         <Header />
         <div className="flex-1 flex overflow-hidden">
           <ErrorBoundary>
-            <aside className="w-[300px] flex-shrink-0 hidden lg:block">
+            <aside className="flex-shrink-0 hidden lg:block">
               <Sidebar />
             </aside>
             <main className="flex-1 flex flex-col overflow-hidden p-6">
