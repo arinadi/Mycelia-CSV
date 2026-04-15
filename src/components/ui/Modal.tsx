@@ -7,12 +7,14 @@ interface ModalProps {
   title: string;
   children: React.ReactNode;
   className?: string;
+  hideClose?: boolean;
+  preventBackdropClick?: boolean;
 }
 
-export function Modal({ isOpen, onClose, title, children, className }: ModalProps) {
+export function Modal({ isOpen, onClose, title, children, className, hideClose = false, preventBackdropClick = false }: ModalProps) {
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape' && !hideClose) onClose();
     };
     if (isOpen) {
       document.addEventListener('keydown', handleEscape);
@@ -22,16 +24,16 @@ export function Modal({ isOpen, onClose, title, children, className }: ModalProp
       document.removeEventListener('keydown', handleEscape);
       document.body.style.overflow = 'unset';
     };
-  }, [isOpen, onClose]);
+  }, [isOpen, onClose, hideClose]);
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center">
       {/* Backdrop */}
       <div 
         className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity"
-        onClick={onClose}
+        onClick={() => !preventBackdropClick && onClose()}
       />
       
       {/* Dialog */}
@@ -45,15 +47,17 @@ export function Modal({ isOpen, onClose, title, children, className }: ModalProp
       >
         <div className="flex items-center justify-between border-b border-border px-6 py-4">
           <h2 className="text-lg font-semibold text-text">{title}</h2>
-          <button 
-            onClick={onClose}
-            className="rounded-md p-1 hover:bg-white/5 text-muted hover:text-text transition-colors focus:outline-none focus:ring-2 focus:ring-accent"
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="18" y1="6" x2="6" y2="18"></line>
-              <line x1="6" y1="6" x2="18" y2="18"></line>
-            </svg>
-          </button>
+          {!hideClose && (
+            <button 
+              onClick={onClose}
+              className="rounded-md p-1 hover:bg-white/5 text-muted hover:text-text transition-colors focus:outline-none focus:ring-2 focus:ring-accent"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+          )}
         </div>
         <div className="p-6">
           {children}

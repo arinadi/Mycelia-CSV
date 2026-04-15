@@ -12,7 +12,7 @@ A local-first, privacy-focused CSV analysis tool powered by DuckDB-WASM and AI.
 - **Export**: Generate and download CSV reports from your query results.
 
 ## Technical Architecture
-- **Frontend**: Next.js 15 (App Router, Static Export)
+- **Frontend**: Vite 6 + React 19 (SPA)
 - **Engine**: DuckDB-WASM with browser-side CSV ingestion
 - **State**: Zustand with session-only persistence
 - **Styling**: Vanilla CSS for premium aesthetics

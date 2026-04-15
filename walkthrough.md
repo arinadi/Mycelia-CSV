@@ -23,9 +23,11 @@ Migrated the entire application from Next.js 15 (static export) to Vite 6 + Reac
 
 ### Modified Files
 - `package.json` — Removed `next`, `eslint-config-next`. Added `vite`, `@vitejs/plugin-react`, `vite-tsconfig-paths`. Updated scripts.
+- `src/components/features/QueryPanel/QueryPanel.tsx` — Added dynamic `z-index` to container when tools (CheatSheet/Mentions) are active.
+- `src/App.tsx` — Removed `overflow-hidden` from main content column to prevent UI clipping.
 - `tsconfig.json` — Target ES2020, jsx react-jsx, removed Next.js plugin
 - `postcss.config.mjs` — Changed Tailwind plugin from string to function invocation (Vite requirement)
-- `eslint.config.mjs` — Replaced `next/core-web-vitals` with `eslint:recommended`
+- `eslint.config.mjs` — Replaced `next/core-web-vitals` with `eslint:recommended`. **Update:** Disabled `no-undef` for TypeScript files (redundant with TS type-checking).
 - `vercel.json` — Added `framework: vite`, SPA rewrites, expanded CSP for Google Fonts
 - `.gitignore` — Updated for Vite (`dist/` instead of `.next/`, `out/`)
 - `agent.md` — Updated tech stack, file locations, and commands

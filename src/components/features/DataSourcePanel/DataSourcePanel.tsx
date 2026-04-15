@@ -1,5 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { useAppStore } from '@/lib/store';
+import { Badge } from '@/components/ui/Badge';
 import { inferColumnType, detectColumnFormat } from '@/lib/inferType';
 import type { CsvColumn, ColumnType } from '@/lib/types';
 import { 
@@ -46,7 +47,10 @@ export function DataSourcePanel() {
     setFile(file);
     setParseStatus('parsing');
 
-    const worker = new Worker(new URL('../../../workers/csv-parser.worker.ts', import.meta.url));
+    const worker = new Worker(
+      new URL('../../../workers/csv-parser.worker.ts', import.meta.url),
+      { type: 'module' }
+    );
     
     worker.postMessage({ file });
 
@@ -123,6 +127,7 @@ export function DataSourcePanel() {
           <div className="flex items-center gap-2 text-accent">
             <CheckCircle className="w-5 h-5" />
             <h3 className="text-sm font-semibold uppercase tracking-wider text-text">Schema Preview</h3>
+            <Badge variant="success" className="text-[10px] ml-1 uppercase font-bold tracking-tighter">Table: data</Badge>
           </div>
           <div className="flex items-center gap-2">
             <button 

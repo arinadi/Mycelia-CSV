@@ -1,7 +1,8 @@
 import React, { useState, useRef } from 'react';
 import { Button } from '@/components/ui/Button';
+import { Badge } from '@/components/ui/Badge';
 import { useAppStore } from '@/lib/store';
-import { FileJson, Layers, Calendar, Hash, CheckCircle2, Type } from 'lucide-react';
+import { FileJson, Layers, Calendar, Hash, CheckCircle2, Type, HelpCircle, X, ChevronRight } from 'lucide-react';
 
 export function QueryPanel() {
   const { 
@@ -20,6 +21,7 @@ export function QueryPanel() {
   
   // Mentions State
   const [showMentions, setShowMentions] = useState(false);
+  const [showCheatSheet, setShowCheatSheet] = useState(false);
   const [mentionSearch, setMentionSearch] = useState('');
   const [mentionIndex, setMentionIndex] = useState(0);
   const [mentionCoords, setMentionCoords] = useState({ top: 0, left: 0 });
@@ -161,7 +163,7 @@ export function QueryPanel() {
   );
 
   return (
-    <div className="flex flex-col rounded-2xl bg-surface/40 border border-border/50 p-6 backdrop-blur-sm">
+    <div className={`flex flex-col rounded-2xl bg-surface/40 border border-border/50 p-6 backdrop-blur-sm transition-all ${showCheatSheet || showMentions ? 'relative z-50' : 'relative z-10'}`}>
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-2 text-accent">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -171,13 +173,83 @@ export function QueryPanel() {
             <path d="M3 5h4" />
             <path d="M17 19h4" />
           </svg>
-          <label htmlFor="nl-query-input" className="text-sm font-semibold uppercase tracking-wider text-text cursor-pointer">
-            Natural Language Query
-          </label>
+          <div className="flex items-center gap-2">
+            <label htmlFor="nl-query-input" className="text-sm font-semibold uppercase tracking-wider text-text cursor-pointer">
+              Natural Language Query
+            </label>
+            <div className="relative">
+              <button 
+                onClick={() => setShowCheatSheet(!showCheatSheet)}
+                className="p-1 rounded-full hover:bg-white/5 text-muted hover:text-accent transition-colors"
+                title="Query Cheat Sheet"
+              >
+                <HelpCircle className="w-4 h-4" />
+              </button>
+
+              {showCheatSheet && (
+                <div className="absolute left-0 top-8 z-[80] w-[450px] rounded-2xl bg-surface/95 border border-border/50 backdrop-blur-xl shadow-2xl p-5 animate-in fade-in zoom-in-95 duration-200">
+                  <div className="flex items-center justify-between mb-4 border-b border-white/5 pb-3">
+                    <div className="flex items-center gap-2">
+                      <div className="p-1.5 rounded-lg bg-accent/20">
+                        <Layers className="w-4 h-4 text-accent" />
+                      </div>
+                      <h4 className="text-sm font-bold text-text uppercase tracking-widest">Excel to SQL Cheat Sheet</h4>
+                    </div>
+                    <button onClick={() => setShowCheatSheet(false)} className="text-muted hover:text-text">
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                    <div className="grid grid-cols-12 gap-2 text-[10px] font-black uppercase text-muted tracking-tighter mb-1 px-2">
+                      <div className="col-span-4">Excel Goal</div>
+                      <div className="col-span-1 text-center">→</div>
+                      <div className="col-span-7">SQL Equivalent</div>
+                    </div>
+
+                    {[
+                      { excel: 'Filter Rows', sql: 'WHERE column = "value"', desc: 'Filter data based on conditions' },
+                      { excel: 'Pivot Table (Rows)', sql: 'GROUP BY column', desc: 'Aggregate data by categories' },
+                      { excel: 'VLOOKUP / XLOOKUP', sql: 'JOIN table ON id', desc: 'Merge data from another table' },
+                      { excel: 'Remove Duplicates', sql: 'SELECT DISTINCT', desc: 'Get unique values only' },
+                      { excel: 'Sort A-Z / Z-A', sql: 'ORDER BY column', desc: 'Arrange data in order' },
+                      { excel: 'SUM / AVG / COUNT', sql: 'SUM() / AVG() / COUNT()', desc: 'Basic arithmetic aggregates' },
+                      { excel: 'IF (Condition)', sql: 'CASE WHEN .. THEN', desc: 'Logical "if-then" branching' },
+                      { excel: 'Combine Text (&)', sql: 'CONCAT(a, b) / a || b', desc: 'Merge multiple columns into one string' },
+                      { excel: 'LEFT / RIGHT / MID', sql: 'SUBSTRING(col, start, len)', desc: 'Extract specific parts of a text string' },
+                      { excel: 'Find & Replace', sql: 'REPLACE(col, "old", "new")', desc: 'Swap specific text within a column' },
+                      { excel: 'Text Search', sql: 'LIKE "%text%"', desc: 'Search for partial text matches' },
+                      { excel: 'Top 10 Rows', sql: 'LIMIT 10', desc: 'Restrict number of results' },
+                    ].map((item, i) => (
+                      <div key={i} className="group p-2.5 rounded-xl bg-white/5 border border-transparent hover:border-accent/30 hover:bg-accent/5 transition-all">
+                        <div className="grid grid-cols-12 gap-2 items-center mb-1">
+                          <div className="col-span-4 text-[11px] font-bold text-text/90">{item.excel}</div>
+                          <div className="col-span-1 text-center text-muted group-hover:text-accent">
+                            <ChevronRight className="w-3 h-3 inline" />
+                          </div>
+                          <div className="col-span-7 font-mono text-[10px] text-accent font-bold bg-accent/10 px-2 py-0.5 rounded border border-accent/20">
+                            {item.sql}
+                          </div>
+                        </div>
+                        <p className="text-[10px] text-muted leading-tight pl-0.5">{item.desc}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="mt-4 pt-3 border-t border-white/5 text-[10px] text-muted italic">
+                    💡 <span className="font-bold text-accent/80">Tip:</span> AI knows your Excel intent. You can type "vlookup with product names" and it will generate the JOIN.
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
-        {dbStatus !== 'ready' && (
-          <Badge variant="danger" className="text-[10px]">Engine Not Ready</Badge>
-        )}
+        <div className="flex items-center gap-2">
+          <Badge variant="success" className="text-[10px] uppercase font-bold tracking-tighter">Table: data</Badge>
+          {dbStatus !== 'ready' && (
+            <Badge variant="danger" className="text-[10px]">Engine Not Ready</Badge>
+          )}
+        </div>
       </div>
       
       <div className="relative mb-6">
@@ -194,7 +266,7 @@ export function QueryPanel() {
         
         {showMentions && filteredColumns.length > 0 && (
           <div 
-            className="absolute z-50 w-56 max-h-48 overflow-y-auto rounded-xl bg-surface/90 border border-border/50 backdrop-blur-xl shadow-2xl p-1 animate-in fade-in zoom-in-95 duration-200 custom-scrollbar"
+            className="absolute z-[70] w-56 max-h-48 overflow-y-auto rounded-xl bg-surface/90 border border-border/50 backdrop-blur-xl shadow-2xl p-1 animate-in fade-in zoom-in-95 duration-200 custom-scrollbar"
             style={{ 
               top: mentionCoords.top, 
               left: mentionCoords.left
@@ -288,15 +360,3 @@ export function QueryPanel() {
   );
 }
 
-function Badge({ children, variant, className }: { children: React.ReactNode, variant: 'default' | 'success' | 'danger', className?: string }) {
-  const styles = {
-    default: 'bg-white/5 text-muted border-border/50',
-    success: 'bg-green-500/10 text-green-400 border-green-500/20',
-    danger: 'bg-red-500/10 text-red-400 border-red-500/20'
-  };
-  return (
-    <span className={`px-2 py-0.5 rounded-full border text-[10px] uppercase font-bold tracking-tighter ${styles[variant]} ${className}`}>
-      {children}
-    </span>
-  );
-}

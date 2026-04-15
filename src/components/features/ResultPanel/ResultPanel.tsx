@@ -9,12 +9,13 @@ export function ResultPanel() {
   const { file, parseStatus, dbStatus, queryResult, executionTime } = useAppStore();
   const [activeTab, setActiveTab] = React.useState<'table' | 'chart'>('table');
 
-  const showSchema = file && (parseStatus === 'done' || parseStatus === 'parsing') && dbStatus !== 'ready';
+  const showSchema = file && (parseStatus === 'parsing' || (parseStatus === 'done' && dbStatus !== 'ready'));
   const showResults = dbStatus === 'ready' && queryResult;
+  const isReady = dbStatus === 'ready' && !queryResult;
 
   return (
     <div className="flex-1 flex flex-col rounded-2xl bg-surface/40 border border-border/50 p-6 backdrop-blur-sm overflow-hidden">
-      {!showSchema && (
+      {!showSchema && !showResults && !isReady && (
         <div className="flex items-center gap-2 mb-6">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <ellipse cx="12" cy="5" rx="9" ry="3" />
@@ -97,6 +98,27 @@ export function ResultPanel() {
 
           <div className="flex-1 min-h-0">
             {activeTab === 'table' ? <ResultTable /> : <ResultChart />}
+          </div>
+        </div>
+      ) : isReady ? (
+        <div className="flex-1 flex flex-col items-center justify-center text-center">
+          <div className="h-20 w-20 rounded-3xl bg-accent/10 flex items-center justify-center mb-6 shadow-2xl shadow-accent/20 animate-in zoom-in-95 duration-500">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-accent">
+              <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />
+            </svg>
+          </div>
+          <h4 className="text-lg font-bold text-text mb-2">Engine is Ready</h4>
+          <p className="text-sm text-muted max-w-sm leading-relaxed px-6">
+            Your dataset has been indexed and is ready for analysis. 
+            <span className="block mt-2 font-medium text-accent/80">Try asking a question in the query panel above.</span>
+          </p>
+          <div className="mt-8 flex gap-3">
+             <div className="px-3 py-1.5 rounded-full bg-surface border border-border/50 text-[10px] font-bold uppercase tracking-widest text-muted">
+               @ Mention columns
+             </div>
+             <div className="px-3 py-1.5 rounded-full bg-surface border border-border/50 text-[10px] font-bold uppercase tracking-widest text-muted">
+               Auto-Charts
+             </div>
           </div>
         </div>
       ) : (

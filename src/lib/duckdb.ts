@@ -21,8 +21,8 @@ export async function initDuckDB(file: File): Promise<duckdb.AsyncDuckDB> {
   const bundle = await duckdb.selectBundle(MANUAL_BUNDLES);
 
   // 2. Instantiate the asynchronous version of DuckDB-Wasm
-  const worker = new Worker(bundle.mainWorker!);
-  const logger = new duckdb.ConsoleLogger();
+  const worker = new Worker(bundle.mainWorker!, { type: 'module' });
+  const logger = new duckdb.ConsoleLogger(duckdb.LogLevel.WARNING);
   db = new duckdb.AsyncDuckDB(logger, worker);
   await db.instantiate(bundle.mainModule, bundle.pthreadWorker);
 
