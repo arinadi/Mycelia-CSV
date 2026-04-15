@@ -43,7 +43,10 @@ interface AppState {
   parseError: string | null;
   sampleRows: Record<string, unknown>[];
   isRawDataOpen: boolean;
+  isRawDataLoading: boolean;
   rawData: Record<string, unknown>[];
+  rawDataPage: number;
+  rawDataPageSize: number;
 
   // Actions
   setProvider: (p: ApiProvider) => void;
@@ -71,8 +74,12 @@ interface AppState {
   executeSql: (sql: string, isAutoRetry?: boolean, retryCount?: number) => Promise<void>;
   goToPage: (page: number) => Promise<void>;
   loadHistoryItem: (id: string) => void;
+  // Raw Data Actions
   openRawData: () => Promise<void>;
   closeRawData: () => void;
+  fetchRawData: () => Promise<void>;
+  setRawDataPage: (page: number) => void;
+  setRawDataPageSize: (size: number) => void;
   exportQueryResult: (format: 'csv' | 'parquet') => Promise<void>;
   fetchMetadata: () => Promise<void>;
 }
@@ -108,7 +115,10 @@ export const useAppStore = create<AppState>()(
   parseError: null,
   sampleRows: [],
   isRawDataOpen: false,
+  isRawDataLoading: false,
   rawData: [],
+  rawDataPage: 0,
+  rawDataPageSize: 50,
 
   setProvider: (p) => {
     let baseUrl = '';
@@ -547,15 +557,23 @@ export const useAppStore = create<AppState>()(
   },
 
   openRawData: async () => {
-    const { dbStatus } = get();
+    const { dbStatus, fetchRawData } = get();
     if (dbStatus !== 'ready') return;
 
-    set({ isRawDataOpen: true });
+    set({ isRawDataOpen: true, rawDataPage: 0 });
+    await fetchRawData();
+  },
+
+  fetchRawData: async () => {
+    const { rawDataPage, rawDataPageSize, dbStatus } = get();
+    if (dbStatus !== 'ready') return;
+
+    set({ isRawDataLoading: true });
     try {
       const { runQuery } = await import('./duckdb');
-      const result = await runQuery('SELECT * FROM data LIMIT 100');
-      // Ensure BigInts are converted to numbers for UI safety where possible, 
-      // or at least handled consistently
+      const offset = rawDataPage * rawDataPageSize;
+      const result = await runQuery(`SELECT * FROM data LIMIT ${rawDataPageSize} OFFSET ${offset}`);
+      
       const safeRows = result.rows.map(row => {
         const newRow: Record<string, unknown> = {};
         for (const [k, v] of Object.entries(row)) {
@@ -563,14 +581,25 @@ export const useAppStore = create<AppState>()(
         }
         return newRow;
       });
-      set({ rawData: safeRows });
+      
+      set({ rawData: safeRows, isRawDataLoading: false });
     } catch (e) {
       console.error('Failed to fetch raw data', e);
-      set({ isRawDataOpen: false });
+      set({ isRawDataLoading: false });
     }
   },
 
-  closeRawData: () => set({ isRawDataOpen: false, rawData: [] }),
+  setRawDataPage: (page) => {
+    set({ rawDataPage: page });
+    get().fetchRawData();
+  },
+
+  setRawDataPageSize: (size) => {
+    set({ rawDataPageSize: size, rawDataPage: 0 });
+    get().fetchRawData();
+  },
+
+  closeRawData: () => set({ isRawDataOpen: false, rawData: [], isRawDataLoading: false }),
 }), {
       name: 'csv-reporter-storage',
       storage: createJSONStorage(() => localStorage),
